@@ -1,5 +1,7 @@
 package zram
 
+//avaible host memory limit in mb non for remove limit
+
 var NONE string = "none"
 
 var HG2 string = "2048"

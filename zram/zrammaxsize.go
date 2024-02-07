@@ -1,5 +1,7 @@
 package zram
 
+//avaible zram max size in mb
+
 var MG2 string = "2048"
 
 var MG4 string = "4096"

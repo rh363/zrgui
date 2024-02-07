@@ -1,5 +1,7 @@
 package zram
 
+//avaible swap priority
+
 var PRIO10 string = "10"
 var PRIO20 string = "20"
 var PRIO30 string = "30"

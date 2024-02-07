@@ -1,5 +1,7 @@
 package zram
 
+//avaible filesystem
+
 var SWAP = "swap"
 var EXT4 = "ext4"
 var EXT2 = "ext2"
