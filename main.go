@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"rh363/zrgui/zram"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 	"github.com/rh363/filemanager"
 	"github.com/taigrr/systemctl"
@@ -18,7 +20,7 @@ import (
 
 // allowed option
 var Configurations zram.ZramConfigurations
-var ConfigurationPath string = "/etc/systemd/zram-generator.conf.bk"
+var ConfigurationPath string = "/etc/systemd/zram-generator.conf"
 
 // service states
 var servicesStates = map[bool]string{
@@ -97,7 +99,7 @@ func main() {
 	}
 	fmt.Println(start_ends)
 
-	var zRamDisks []zram.ZramDiskConfiguration
+	var zRamDisks zram.ZramConfigurations
 	for _, start_end := range start_ends {
 		var zRamDisk zram.ZramDiskConfiguration
 		for i := start_end.start; i <= start_end.end; i++ {
@@ -130,7 +132,7 @@ func main() {
 				zRamDisk.Mount_point = strings.Split(strings.Split(activeConfigurationsFile[i], "=")[1], " ")[1]
 			}
 		}
-		zRamDisks = append(zRamDisks, zRamDisk)
+		zRamDisks.Disks = append(zRamDisks.Disks, zRamDisk)
 	}
 	fmt.Println(zRamDisks)
 
@@ -151,7 +153,7 @@ func main() {
 	*/
 	ItemMenu := widget.NewList(
 		func() int {
-			return len(zRamDisks)
+			return len(zRamDisks.Disks)
 		},
 		func() fyne.CanvasObject {
 			return container.NewBorder(
@@ -205,7 +207,7 @@ func main() {
 		},
 		func(lii widget.ListItemID, co fyne.CanvasObject) {
 			MainContainer := co.(*fyne.Container)
-			zRamDisk := &zRamDisks[lii]
+			zRamDisk := &zRamDisks.Disks[lii]
 
 			title := MainContainer.Objects[1].(*widget.Label)
 			title.SetText(zRamDisk.ID)
@@ -291,7 +293,7 @@ func main() {
 			MPLabel.SetText("mount-point:")
 			MPEntry.SetOptions(zram.MOUNTPOINT_LIST)
 			MPEntry.SetText(zRamDisk.Mount_point)
-			SPEntry.OnChanged = func(s string) {
+			MPEntry.OnChanged = func(s string) {
 				zRamDisk.Mount_point = MPEntry.Text
 			}
 
@@ -302,7 +304,14 @@ func main() {
 	apply configuration
 	*/
 	ApplyBtn := widget.NewButton("Apply", func() {
-		fmt.Println(zRamDisks)
+		os.Remove(ConfigurationPath)
+		filemanager.WriteFile(ConfigurationPath, zRamDisks.ToWrite())
+		if ZramService {
+			if err := ZramRestart(); err != nil {
+				dial := dialog.NewError(errors.New("ERROR - CANT RESTART SERVICE,SYSTEMCTL OR OPTION ERROR"), w)
+				dial.Show()
+			}
+		}
 	})
 
 	/*StBtn
@@ -321,23 +330,27 @@ func main() {
 	StBtn.OnTapped = func() {
 		switch ZramService {
 		case true:
-			ZramService = false
-			StBtn.Text = "Start"
-			ServiceState.Text = servicesStates[ZramService]
 			if err := ZramOff(); err != nil {
-				panic(err.Error())
+				dial := dialog.NewError(errors.New("ERROR - CANT RESTART SERVICE,SYSTEMCTL OR OPTION ERROR"), w)
+				dial.Show()
+			} else {
+				ZramService = false
+				StBtn.Text = "Start"
+				ServiceState.Text = servicesStates[ZramService]
+				Footer.Refresh()
+				Header.Refresh()
 			}
-			Footer.Refresh()
-			Header.Refresh()
 		case false:
-			ZramService = true
 			if err := ZramOn(); err != nil {
-				panic(err.Error())
+				dial := dialog.NewError(errors.New("ERROR - CANT RESTART SERVICE,SYSTEMCTL OR OPTION ERROR"), w)
+				dial.Show()
+			} else {
+				ZramService = true
+				StBtn.Text = "Stop"
+				ServiceState.Text = servicesStates[ZramService]
+				Footer.Refresh()
+				Header.Refresh()
 			}
-			StBtn.Text = "Stop"
-			ServiceState.Text = servicesStates[ZramService]
-			Footer.Refresh()
-			Header.Refresh()
 		}
 	}
 

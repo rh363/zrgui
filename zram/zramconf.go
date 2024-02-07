@@ -33,6 +33,9 @@ func (zrd ZramDiskConfiguration) ToWrite() []string {
 		}
 		return strings
 	}
+	/*if zrd.Mount_point == "" {
+		zrd.Mount_point = TMP
+	}*/
 	strings := []string{
 		"[" + zrd.ID + "]\n",
 		"host-memory-limit = " + zrd.Host_memory_limit + "\n",
@@ -48,9 +51,9 @@ func (zrd ZramDiskConfiguration) ToWrite() []string {
 func (zrc ZramConfigurations) ToWrite() []string {
 	var strings []string
 	for _, zrd := range zrc.Disks {
-		strings = append(strings, "#start "+zrd.ID+" zramdisk configuration")
+		strings = append(strings, "#start "+zrd.ID+" zramdisk configuration \n\n")
 		strings = append(strings, zrd.ToWrite()...)
-		strings = append(strings, "#end "+zrd.ID+" zramdisk configuration")
+		strings = append(strings, "\n#end "+zrd.ID+" zramdisk configuration \n\n")
 	}
 	return strings
 }
