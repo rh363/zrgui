@@ -1,34 +1,56 @@
 package zram
 
-import "fmt"
+import (
+	"strconv"
+)
 
 type ZramConfigurations struct {
-	Name string
-	Disk []ZramDiskConfiguration
+	Name  string
+	Disks []ZramDiskConfiguration
 }
 
 type ZramDiskConfiguration struct {
 	ID                    string
 	Host_memory_limit     string
 	Zram_fraction         float64
-	Max_zram_size         string
+	Max_zram_size         int
 	Compression_algorithm string
 	Fs_type               string
 	Swap_priority         int
 	Mount_point           string
 }
 
-func NewZramDisk(ID string, Host_memory_limit string, Zram_fraction float64, Max_zram_size string, Compression_algorithm string, Fs_type string, Swap_priority int, Mount_point string) ZramDiskConfiguration {
-	return ZramDiskConfiguration{ID, Host_memory_limit, Zram_fraction, Max_zram_size, Compression_algorithm, Fs_type, Swap_priority, Mount_point}
-}
-
-func NewZramConfiguration(Name string, ZramDisks []ZramDiskConfiguration) ZramConfigurations {
-	return ZramConfigurations{Name, ZramDisks}
-}
-
-func (zrd ZramDiskConfiguration) ToString() string {
+func (zrd ZramDiskConfiguration) ToWrite() []string {
 	if zrd.Fs_type == SWAP {
-		return fmt.Sprintf("[%s]\n%s\n%f\n%s\n%s\n%s\n%d\n", zrd.ID, zrd.Host_memory_limit, zrd.Zram_fraction, zrd.Max_zram_size, zrd.Compression_algorithm, zrd.Fs_type, zrd.Swap_priority)
+		strings := []string{
+			"[" + zrd.ID + "]\n",
+			"host-memory-limit = " + zrd.Host_memory_limit + "\n",
+			"zram-fraction = " + strconv.FormatFloat(zrd.Zram_fraction, 'f', -1, 64) + "\n",
+			"max-zram-size = " + strconv.Itoa(zrd.Max_zram_size) + "\n",
+			"compression-algorithm = " + zrd.Compression_algorithm + "\n",
+			"fs-type = " + zrd.Fs_type + "\n",
+			"swap-priority = " + strconv.Itoa(zrd.Swap_priority) + "\n",
+		}
+		return strings
 	}
-	return fmt.Sprintf("[%s]\n%s\n%f\n%s\n%s\n%s\n%s\n", zrd.ID, zrd.Host_memory_limit, zrd.Zram_fraction, zrd.Max_zram_size, zrd.Compression_algorithm, zrd.Fs_type, zrd.Mount_point)
+	strings := []string{
+		"[" + zrd.ID + "]\n",
+		"host-memory-limit = " + zrd.Host_memory_limit + "\n",
+		"zram-fraction = " + strconv.FormatFloat(zrd.Zram_fraction, 'f', -1, 64) + "\n",
+		"max-zram-size = " + strconv.Itoa(zrd.Max_zram_size) + "\n",
+		"compression-algorithm = " + zrd.Compression_algorithm + "\n",
+		"fs-type = " + zrd.Fs_type + "\n",
+		"mount-point = " + zrd.Mount_point + "\n",
+	}
+	return strings
+}
+
+func (zrc ZramConfigurations) ToWrite() []string {
+	var strings []string
+	for _, zrd := range zrc.Disks {
+		strings = append(strings, "#start "+zrd.ID+" zramdisk configuration")
+		strings = append(strings, zrd.ToWrite()...)
+		strings = append(strings, "#end "+zrd.ID+" zramdisk configuration")
+	}
+	return strings
 }
